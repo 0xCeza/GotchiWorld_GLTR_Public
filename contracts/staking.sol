@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 TODO 
 
-- check if/when claimGltr reverts
-- Claim interest from AAVE?
 - Manage Bot that will
 1. Claim & Withdraw GLTR => FROM SWAPPER CONTRACT
 2. Withdraw GHST (include fees) => FROM SWAPPER CONTRACT
@@ -69,12 +67,10 @@ interface IWrapper {
 }
 
 contract Staking is Ownable {
-    address diamond = 0x86935F11C86623deC8a25696E1C19a8659CbF95d;
     address ghst = 0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7;
     address wapGhst = 0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA;
     address gltrStaking = 0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c;
     address gltr = 0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc;
-    address autolending;
 
     uint256 private constant STAKING_AMOUNT = 99 * 10**18;
     uint256 private constant FEES = 10**18;
@@ -82,7 +78,7 @@ contract Staking is Ownable {
         115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     address[] private users;
-    mapping(address => uint256) public usersToIndex;
+    mapping(address => uint256) private usersToIndex;
 
     mapping(address => uint256) private ghstBalance;
     mapping(address => uint256) private sharesBalance;
@@ -98,6 +94,9 @@ contract Staking is Ownable {
 
         // Mandatory, index 0 cannot be empty
         _addUser(0x86935F11C86623deC8a25696E1C19a8659CbF95d);
+
+        // Add owner as approved
+        isApproved[msg.sender] = true;
     }
 
     modifier onlyApproved() {
@@ -112,11 +111,33 @@ contract Staking is Ownable {
         return usersToIndex[_address] > 0;
     }
 
+    function getIsApproved(address _address) external view returns (bool) {
+        return isApproved[_address];
+    }
+
     function getUsers() external view returns (address[] memory) {
         return users;
     }
 
-    function getUserBalance(address _user) external view returns (uint256) {
+    function getUsersIndexed(uint256 _pointer, uint256 _amount)
+        external
+        view
+        returns (address[] memory)
+    {
+        address[] memory addresses = new address[](_amount);
+        for (uint256 i = 0; i < _amount; i++) {
+            uint256 pointer = _pointer + i;
+            if (pointer > users.length) break;
+            addresses[i] = users[pointer];
+        }
+        return addresses;
+    }
+
+    function getUsersToIndex(address _user) external view returns (uint256) {
+        return usersToIndex[_user];
+    }
+
+    function getUserGhstBalance(address _user) external view returns (uint256) {
         return ghstBalance[_user];
     }
 
@@ -131,6 +152,7 @@ contract Staking is Ownable {
         // Get the ghst from the account to the contract
         IGHST(ghst).transferFrom(msg.sender, address(this), STAKING_AMOUNT);
 
+        // Remove 1 GHST Fees
         uint256 stakingAmount = STAKING_AMOUNT - FEES;
 
         // wrap the GHST
@@ -139,7 +161,7 @@ contract Staking is Ownable {
         // deposit wrapped ghst
         IGltrStaking(gltrStaking).deposit(0, shares);
 
-        // Update the Balance of the msgsender
+        // Update the Balance of the user
         ghstBalance[msg.sender] = stakingAmount;
         sharesBalance[msg.sender] = shares;
 
@@ -148,24 +170,24 @@ contract Staking is Ownable {
     }
 
     function leave() external {
-        // Check if the account has enough ghst staked
-        require(ghstBalance[msg.sender] > 0, "Staking: Can't unstake");
+        // Check if the account has ghst staked
+        require(ghstBalance[msg.sender] > 0, "Staking: Nothing to unstake");
 
-        // Save balance of msgsender
+        // Save balance of the user
         uint256 tempBalance = ghstBalance[msg.sender];
         uint256 tempShares = sharesBalance[msg.sender];
 
-        // Update the balances of msgsender
+        // Update the balances of the user
         ghstBalance[msg.sender] = 0;
         sharesBalance[msg.sender] = 0;
 
-        // Undeposit wapGhst
+        // Withdraw wapGhst
         IGltrStaking(gltrStaking).withdraw(0, tempShares);
 
-        // unwrap ghst
+        // Unwrap ghst
         IWrapper(wapGhst).leaveToUnderlying(tempShares);
 
-        // Send back the ghst to the msgsender
+        // Send back the ghst to the user
         IGHST(ghst).transfer(msg.sender, tempBalance);
 
         // Remove from user array
@@ -180,10 +202,10 @@ contract Staking is Ownable {
         // No need to add twice the same account
         require(usersToIndex[_newUser] == 0, "staking: user already added");
 
-        // Get the index where the new user is in the array
+        // Get the index where the new user is in the array (= last position)
         usersToIndex[_newUser] = users.length;
 
-        // Push the data in the array
+        // Add the user in the array
         users.push(_newUser);
     }
 
@@ -221,19 +243,26 @@ contract Staking is Ownable {
     /**
      * @dev GLTR is claimed when a user leaves
      */
+    function claimGltr() external {
+        IGltrStaking(gltrStaking).harvest(0);
+    }
+
     function withdrawGltr(address _tokenReceiver) external onlyApproved {
-        IGltrStaking(gltrStaking).harvest(0); // todo check if/when reverts
         uint256 amount = IERC20(gltr).balanceOf(address(this));
         IERC20(gltr).transfer(_tokenReceiver, amount);
     }
 
+    /**
+     * @notice Can't withdraw user fund with this function
+     * User funds are, at all time, staked in the Aavegotchi contract
+     */
     function withdrawGhst(address _tokenReceiver) external onlyApproved {
         uint256 amount = IERC20(ghst).balanceOf(address(this));
         IERC20(ghst).transfer(_tokenReceiver, amount);
     }
 
     function withdrawGltrAndGhst(address _tokenReceiver) external onlyApproved {
-        IGltrStaking(gltrStaking).harvest(0); // todo check if/when reverts
+        IGltrStaking(gltrStaking).harvest(0);
         uint256 amountGltr = IERC20(gltr).balanceOf(address(this));
         if (amountGltr > 0) IERC20(gltr).transfer(_tokenReceiver, amountGltr);
 
