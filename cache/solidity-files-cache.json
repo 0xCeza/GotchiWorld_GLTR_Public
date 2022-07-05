@@ -2,11 +2,11 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\github\\GotchiWorld_GLTR_Public\\contracts\\staking.sol": {
-      "lastModificationDate": 1656944573541,
-      "contentHash": "a4f733de2f87dc7b1214f688052d45e2",
+      "lastModificationDate": 1657013429565,
+      "contentHash": "b37a2ddd40f3a303eed51cd994cee91c",
       "sourceName": "contracts/staking.sol",
       "solcConfig": {
-        "version": "0.8.13",
+        "version": "0.8.7",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -33,9 +33,10 @@
         "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [
-        "0.8.13"
+        "0.8.7"
       ],
       "artifacts": [
+        "IAavegotchiGameFacet",
         "IGHST",
         "IGltrStaking",
         "IWrapper",
@@ -47,7 +48,7 @@
       "contentHash": "a44d1a099633876550ad2476b21bafbe",
       "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
       "solcConfig": {
-        "version": "0.8.13",
+        "version": "0.8.7",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -82,7 +83,7 @@
       "contentHash": "8398972af73b4e9e5ff3b31cad86234f",
       "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
       "solcConfig": {
-        "version": "0.8.13",
+        "version": "0.8.7",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -119,7 +120,7 @@
       "contentHash": "5f2c5c4b6af2dd4551027144797bc8be",
       "sourceName": "@openzeppelin/contracts/utils/Context.sol",
       "solcConfig": {
-        "version": "0.8.13",
+        "version": "0.8.7",
         "settings": {
           "optimizer": {
             "enabled": false,
@@ -147,6 +148,42 @@
       ],
       "artifacts": [
         "Context"
+      ]
+    },
+    "C:\\github\\GotchiWorld_GLTR_Public\\contracts\\petting.sol": {
+      "lastModificationDate": 1657013404032,
+      "contentHash": "d1b9df932b6f338f0f44e797439c2ad7",
+      "sourceName": "contracts/petting.sol",
+      "solcConfig": {
+        "version": "0.8.7",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.7"
+      ],
+      "artifacts": [
+        "IAavegotchiGameFacet",
+        "NurseryPetting"
       ]
     }
   }

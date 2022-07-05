@@ -1,30 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.13;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-
-/**
-
-TODO 
-
-- Manage Bot that will
-1. Claim & Withdraw GLTR => FROM SWAPPER CONTRACT
-2. Withdraw GHST (include fees) => FROM SWAPPER CONTRACT
-3. Call private swapper contract (use quickswap)
-
-in SWAPPER :
-function swapToMaticAndUsdc() external onlySwapperBotOrOwner {
-    IStaking(stakingAddress).withdrawGltrAndGhst(address(this));
-    _swapGltrToGhst(gltrAmount);
-    _swapGhstToMatic(ghstAmount / 3);
-    _swapGhstToUsdc(ghstAmount / 3);
-    IERC20(Matic).transfer(petter, allBalance);
-    IERC20(USDC).transfer(owner, allBalance);
-    IERC20(GHST).transfer(owner, allBalance);
-}
-
- */
 
 interface IGHST {
     function stakeGhst(uint256 _ghstValue) external;
@@ -66,16 +44,25 @@ interface IWrapper {
         returns (uint256 assets);
 }
 
+interface IAavegotchiGameFacet {
+    function isPetOperatorForAll(address _owner, address _operator)
+        external
+        view
+        returns (bool approved_);
+}
+
 contract Staking is Ownable {
+    address diamond = 0x86935F11C86623deC8a25696E1C19a8659CbF95d;
     address ghst = 0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7;
     address wapGhst = 0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA;
     address gltrStaking = 0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c;
     address gltr = 0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc;
+    address petter = 0x290000C417a1DE505eb08b7E32b3e8dA878D194E;
 
     uint256 private constant STAKING_AMOUNT = 99 * 10**18;
     uint256 private constant FEES = 10**18;
     uint256 constant MAX_INT =
-        115792089237316195423570985008687907853269984665640564039457584007913129639935;
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     address[] private users;
     mapping(address => uint256) private usersToIndex;
@@ -111,12 +98,25 @@ contract Staking is Ownable {
         return usersToIndex[_address] > 0;
     }
 
+    function hasApprovedGotchiInteraction(address _account)
+        public
+        view
+        returns (bool)
+    {
+        return
+            IAavegotchiGameFacet(diamond).isPetOperatorForAll(_account, petter);
+    }
+
     function getIsApproved(address _address) external view returns (bool) {
         return isApproved[_address];
     }
 
     function getUsers() external view returns (address[] memory) {
         return users;
+    }
+
+    function getUsersCount() external view returns (uint256) {
+        return users.length - 1;
     }
 
     function getUsersIndexed(uint256 _pointer, uint256 _amount)
@@ -145,6 +145,14 @@ contract Staking is Ownable {
         return sharesBalance[_user];
     }
 
+    function getContractGltr() external view returns (uint256) {
+        return IERC20(gltr).balanceOf(address(this));
+    }
+
+    function getContractGhst() external view returns (uint256) {
+        return IERC20(ghst).balanceOf(address(this));
+    }
+
     function signUp() external {
         // Make sure user is not already staking
         require(ghstBalance[msg.sender] == 0, "Staking: Already staking");
@@ -152,7 +160,7 @@ contract Staking is Ownable {
         // Get the ghst from the account to the contract
         IGHST(ghst).transferFrom(msg.sender, address(this), STAKING_AMOUNT);
 
-        // Remove 1 GHST Fees
+        // Removes 1 GHST as Fees
         uint256 stakingAmount = STAKING_AMOUNT - FEES;
 
         // wrap the GHST

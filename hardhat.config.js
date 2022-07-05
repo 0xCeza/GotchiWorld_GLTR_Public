@@ -7,7 +7,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 
 module.exports = {
-  solidity: "0.8.13",
+  solidity: "0.8.7",
   networks: {
     hardhat: {
       forking: {
@@ -16,10 +16,10 @@ module.exports = {
     },
     polygon: {
       url: "https://polygon-rpc.com",
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.PRIVATE_KEY_GW],
     },
   },
   etherscan: {
-    apiKey: process.env.POLYGONSCAN_KEY,
+    apiKey: process.env.POLYGONSCAN,
   },
 };
